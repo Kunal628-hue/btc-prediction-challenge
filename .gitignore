@@ -1,0 +1,7 @@
+__pycache__/
+.DS_Store
+.ipynb_checkpoints/
+*.pyc
+venv/
+.env
+history.jsonl
