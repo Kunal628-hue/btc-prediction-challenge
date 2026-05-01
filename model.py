@@ -58,6 +58,89 @@ def simulate_mc_clean(S0, mu, sigma_fig, H, M, bar_sigma2, nu, redundancy_val, i
     S_t1 = S0 * np.exp((mu - 0.5 * sigma2) * dt + np.sqrt(sigma2 * dt) * Z)
     return S_t1
 
+def theoretical_option_price(S0, K, T, r, paths, option_type):
+    # paths is [n_sims, n_steps+1]
+    # T is in years, but here we use steps. 
+    # To match starter: t_index = int(T * 365) if crypto
+    t_index = -1 # Use the final step of the simulation
+    ST = paths[:, t_index]
+    
+    if option_type == 'call':
+        payoff = np.maximum(ST - K, 0)
+    else:
+        payoff = np.maximum(K - ST, 0)
+    
+    # Simple discounting
+    return np.exp(-r * T) * np.mean(payoff)
+
+def calculate_greeks(S0, K, T, r, paths, option_type, epsilon=0.01):
+    base_price = theoretical_option_price(S0, K, T, r, paths, option_type)
+    
+    # Delta & Gamma via bumping S0 (approximation using the same paths scaled)
+    price_up = theoretical_option_price(S0*(1+epsilon), K, T, r, paths*(1+epsilon), option_type)
+    price_down = theoretical_option_price(S0*(1-epsilon), K, T, r, paths*(1-epsilon), option_type)
+    
+    delta = (price_up - price_down) / (2 * epsilon * S0)
+    gamma = (price_up - 2*base_price + price_down) / ((epsilon * S0)**2)
+    
+    # Vega via bumping the entire paths (sigma proxy)
+    # We don't have a simple sigma to bump, so we scale the deviations from S0
+    paths_up = S0 + (paths - S0) * (1 + epsilon)
+    paths_down = S0 + (paths - S0) * (1 - epsilon)
+    vega = (theoretical_option_price(S0, K, T, r, paths_up, option_type) - 
+            theoretical_option_price(S0, K, T, r, paths_down, option_type)) / (2 * epsilon)
+            
+    # Theta (approx by reducing T slightly)
+    T_small = max(T - 1/365, 0.001)
+    theta = (theoretical_option_price(S0, K, T_small, r, paths, option_type) - base_price)
+    
+    return {'delta': delta, 'gamma': gamma, 'vega': vega, 'theta': theta}
+
+def get_options_strategy(prices, S_t1):
+    # S_t1 is the [n_sims] prediction for the next hour
+    # We'll use this to price a 1-day strangle as a demonstration of the strategy
+    S0 = prices.iloc[-1]
+    r = 0.05
+    T = 1/365 # 1 day
+    
+    # Reshape S_t1 for theoretical_option_price compatibility
+    paths = S_t1.reshape(-1, 1)
+    
+    # Optimal Strikes (95% range)
+    K_put, K_call = np.percentile(S_t1, [2.5, 97.5])
+    
+    theoretical_put = theoretical_option_price(S0, K_put, T, r, paths, 'put')
+    theoretical_call = theoretical_option_price(S0, K_call, T, r, paths, 'call')
+    
+    greeks_put = calculate_greeks(S0, K_put, T, r, paths, 'put')
+    greeks_call = calculate_greeks(S0, K_call, T, r, paths, 'call')
+    
+    # Mock market data (as seen in starter.py)
+    # In a real app, this would fetch from an options API
+    market_put = theoretical_put * (0.95 + 0.1 * np.random.rand())
+    market_call = theoretical_call * (0.95 + 0.1 * np.random.rand())
+    
+    total_theory = theoretical_put + theoretical_call
+    total_market = market_put + market_call
+    ratio = total_market / total_theory if total_theory > 0 else 1.0
+    
+    recommendation = "NEUTRAL"
+    if ratio < 0.85: recommendation = "BUY STRANGLE (Underpriced)"
+    elif ratio > 1.15: recommendation = "SELL STRANGLE (Overpriced)"
+    
+    return {
+        'K_put': K_put,
+        'K_call': K_call,
+        'theory_put': theoretical_put,
+        'theory_call': theoretical_call,
+        'market_put': market_put,
+        'market_call': market_call,
+        'greeks_put': greeks_put,
+        'greeks_call': greeks_call,
+        'recommendation': recommendation,
+        'ratio': ratio
+    }
+
 def predict_next_bar(prices):
     log_ret = np.log(prices / prices.shift(1)).dropna()
     am = arch_model(log_ret * 100, vol='FIGARCH', p=1, o=0, q=1, dist='studentst')
