@@ -18,15 +18,25 @@ st.set_page_config(
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-    /* Global Styles */
+    /* Global Styles & Dark Mode Enforcement */
     :root {
         --primary: #F7931A;
         --secondary: #4D90FE;
         --success: #00C853;
         --danger: #FF3D00;
+        --bg-color: #0E1117;
+        --text-color: #FFFFFF;
+        --text-dim: rgba(255, 255, 255, 0.6);
+        --glass-bg: rgba(255, 255, 255, 0.05);
+        --glass-border: rgba(255, 255, 255, 0.1);
     }
 
-    /* Streamlit Theme Overrides */
+    /* Force Dark Background on the whole App */
+    .stApp {
+        background-color: var(--bg-color) !important;
+        color: var(--text-color) !important;
+    }
+
     .main {
         font-family: 'Inter', sans-serif;
     }
@@ -35,6 +45,7 @@ st.markdown("""
         font-family: 'Outfit', sans-serif;
         font-weight: 700;
         letter-spacing: -0.02em;
+        color: var(--text-color) !important;
     }
 
     /* Live Indicator */
@@ -66,21 +77,22 @@ st.markdown("""
         100% { box-shadow: 0 0 0 0px rgba(0, 200, 83, 0); }
     }
 
-    /* Glassmorphic Card - Adaptive */
+    /* Glassmorphic Card - Forced Dark */
     .glass-card {
-        background: rgba(128, 128, 128, 0.05);
+        background: var(--glass-bg);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(128, 128, 128, 0.1);
+        border: 1px solid var(--glass-border);
         border-radius: 20px;
         padding: 24px;
         margin-bottom: 20px;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
+        color: var(--text-color) !important;
     }
     
     .glass-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.3);
     }
 
     /* Metric Styling */
@@ -92,8 +104,7 @@ st.markdown("""
     
     .metric-label {
         font-size: 0.85rem;
-        color: var(--text-color);
-        opacity: 0.6;
+        color: var(--text-dim);
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -137,16 +148,15 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* Tab Styling */
+    /* Tab Styling Overrides */
     .stTabs [data-baseweb="tab-list"] {
         gap: 24px;
+        background-color: transparent !important;
     }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
-        white-space: pre-wrap;
-        background-color: transparent;
-        border-radius: 4px;
-        color: var(--text-dim);
+        background-color: transparent !important;
+        color: var(--text-dim) !important;
         font-weight: 600;
     }
     .stTabs [aria-selected="true"] {
