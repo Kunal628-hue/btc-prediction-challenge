@@ -5,3 +5,4 @@ __pycache__/
 venv/
 .env
 history.jsonl
+backtest_results.jsonl
